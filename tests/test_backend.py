@@ -17,6 +17,166 @@ def png(rgb=(255,0,0)):
     return b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('!2I5B',2,2,8,2,0,0,0))+chunk(b'IDAT',zlib.compress((b'\0'+bytes(rgb)*2)*2))+chunk(b'IEND',b'')
 
 class BackendTests(unittest.TestCase):
+    def test_restore_last_survives_empty_catalog_and_missing_extractor(self):
+        source=self.image();selected='palette:'+self.b.token(source)+':json'
+        self.assertTrue(self.b.action(selected,'export',True)['ok'])
+        source.unlink();self.b.MAGICK='/missing-extractor'
+        value=self.b.catalog();self.assertEqual(value['rows'],[]);self.assertEqual(value['actions'],['export','restore'])
+        self.assertFalse(self.b.action('palette:other:json','restore',True)['ok'])
+        result=self.b.action('restore:last','restore',True);self.assertTrue(result['ok'],result)
+        self.assertEqual(result['actions'],['export'])
+
+    def test_disappearing_selected_source_still_refuses_before_extract(self):
+        source=self.image();selected='palette:'+self.b.token(source)+':json';actual=self.b.image_files
+        def race():
+            files=actual();source.unlink();return files
+        with patch.object(self.b,'image_files',race),patch.object(self.b,'extract',wraps=self.b.extract) as decode:
+            result=self.b.action(selected,'export',True)
+        self.assertFalse(result['ok']);self.assertNotIn('actions',result);decode.assert_not_called()
+        self.assertFalse(self.b.export_root().exists())
+
+    def test_identical_concurrent_publication_without_previous_receipt_never_claims_external_file(self):
+        source=self.image();selected='palette:'+self.b.token(source)+':json';actual=self.b.os.link
+        target=self.b.export_root()/(selected.split(':')[1]+'.json');expected=self.b.render(['#FF0000'],'json')
+        def race(src,dst,**kwargs):
+            target.write_bytes(expected);return actual(src,dst,**kwargs)
+        with patch.object(self.b.os,'link',race):failed=self.b.action(selected,'export',True)
+        self.assertFalse(failed['ok']);self.assertNotIn('actions',failed)
+        self.assertEqual(self.b.journal(),{});self.assertEqual(target.read_bytes(),expected)
+        retry=self.b.action(selected,'export',True)
+        self.assertTrue(retry['ok'],retry);self.assertEqual(retry.get('actions'),['export'])
+        self.assertFalse(self.b.action('restore:last','restore',True)['ok'])
+        self.assertEqual(target.read_bytes(),expected)
+
+    def test_publication_boundaries_keep_the_receipt_for_the_published_inode(self):
+        self.image('aaa.png');source=self.image('bbb.png',(0,0,255))
+        first_id='palette:'+self.b.token(self.home/'Pictures/Wallpapers/aaa.png')+':json'
+        selected='palette:'+self.b.token(source)+':json'
+        self.assertTrue(self.b.action(first_id,'export',True)['ok']);previous=self.b.journal()
+        target=self.b.export_root()/(selected.split(':')[1]+'.json')
+        boundaries=('receipt-file-fsync','receipt-replace-before','receipt-replace-after','crash-after-replace','link-error-after-publication','crash-after-link','export-dir-fsync','final-save-before','final-save-after')
+        for boundary in boundaries:
+            with self.subTest(boundary=boundary):
+                if target.exists():target.unlink()
+                with self.b.State() as state:state.save(previous)
+                pid=os.fork()
+                if pid==0:
+                    actual_fsync=os.fsync;actual_replace=os.replace;actual_link=os.link;actual_save=self.b.State.save
+                    saves=0
+                    def save(state,value):
+                        nonlocal saves
+                        saves+=1
+                        if saves==2 and boundary=='final-save-before':raise OSError('full before final save')
+                        actual_save(state,value)
+                        if saves==2 and boundary=='final-save-after':raise OSError('full after final save')
+                    def fsync(fd):
+                        path=Path(os.readlink('/proc/self/fd/'+str(fd)))
+                        if boundary=='receipt-file-fsync' and path.name.startswith('.write-'):raise OSError('file fsync failed')
+                        if boundary=='export-dir-fsync' and path==self.b.export_root():raise OSError('export fsync failed')
+                        return actual_fsync(fd)
+                    def replace(src,dst,**kwargs):
+                        if dst=='restore.json' and boundary=='receipt-replace-before':raise OSError('replace failed')
+                        actual_replace(src,dst,**kwargs)
+                        if dst=='restore.json' and boundary=='receipt-replace-after':raise OSError('replace persisted but fsync failed')
+                        if dst=='restore.json' and boundary=='crash-after-replace':os._exit(73)
+                    def link(src,dst,**kwargs):
+                        actual_link(src,dst,**kwargs)
+                        if boundary=='link-error-after-publication':raise OSError('interrupted after publication')
+                        if boundary=='crash-after-link':os._exit(73)
+                    with patch.object(self.b.State,'save',save),patch.object(os,'fsync',fsync),patch.object(os,'replace',replace),patch.object(os,'link',link):
+                        result=self.b.action(selected,'export',True)
+                    os._exit(0 if not result['ok'] and 'actions' not in result else 74)
+                _,status=os.waitpid(pid,0)
+                self.assertEqual(os.waitstatus_to_exitcode(status),73 if boundary.startswith('crash-') else 0)
+                published=boundary in ('link-error-after-publication','crash-after-link','export-dir-fsync','final-save-before','final-save-after')
+                receipt=self.b.journal()
+                self.assertEqual(receipt['selected'],selected if published else first_id)
+                if published:
+                    self.assertEqual(target.read_bytes(),self.b.render(['#0000FF'],'json'))
+                    self.assertEqual(target.stat().st_ino,receipt['inode'])
+                    restored=self.b.action('restore:last','restore',True);self.assertTrue(restored['ok'],restored)
+                else:self.assertFalse(target.exists())
+        with self.b.State() as state:state.save(previous)
+        self.assertTrue(self.b.action(first_id,'restore',True)['ok'])
+
+    def test_action_hints_replace_only_capabilities_without_catalog_decode(self):
+        source=self.image();selected='palette:'+self.b.token(source)+':json'
+        for repeat in range(2):
+            with patch.object(self.b,'extract',wraps=self.b.extract) as decode,patch.object(self.b,'catalog',side_effect=AssertionError('catalog reload')):
+                result=self.b.action(selected,'export',True)
+            self.assertTrue(result['ok'],result);self.assertEqual(result.get('actions'),['export','restore'])
+            self.assertEqual(decode.call_count,1)
+        restored=self.b.action('restore:last','restore',True)
+        self.assertTrue(restored['ok'],restored);self.assertEqual(restored.get('actions'),['export'])
+        # Matching external bytes are not ownership, nor permission to detach them.
+        target=Path(result['path']);target.write_bytes(self.b.render(['#FF0000'],'json'));stamp=target.stat().st_mtime_ns
+        identical=self.b.action(selected,'export',True)
+        self.assertTrue(identical['ok'],identical);self.assertEqual(identical.get('actions'),['export'])
+        self.assertEqual(target.stat().st_mtime_ns,stamp)
+        self.assertFalse(self.b.action('restore:last','restore',True)['ok'])
+        # An identical existing file must not consume a different owned receipt.
+        other=self.image('blue.png',(0,0,255));other_id='palette:'+self.b.token(other)+':css'
+        self.assertTrue(self.b.action(other_id,'export',True)['ok'])
+        previous=self.b.journal();identical=self.b.action(selected,'export',True)
+        self.assertEqual(identical.get('actions'),['export','restore']);self.assertEqual(self.b.journal(),previous)
+        (self.b.export_root()/previous['file']).write_bytes(b'external edit')
+        self.assertEqual(self.b.action(selected,'export',True).get('actions'),['export'])
+        target.write_bytes(b'other writer')
+        failed=self.b.action(selected,'export',True)
+        self.assertFalse(failed['ok']);self.assertNotIn('actions',failed)
+
+    def test_unrelated_candidate_race_does_not_block_selected_export(self):
+        unrelated=self.image('aaa.png');wanted=self.image('zzz.png',(0,0,255))
+        selected='palette:'+self.b.token(wanted)+':json';actual=self.b.image_files
+        for replacement in ('missing','symlink','fifo','oversized'):
+            with self.subTest(replacement=replacement):
+                if unrelated.exists() or unrelated.is_symlink():unrelated.unlink()
+                unrelated.write_bytes(png())
+                def race():
+                    files=actual();unrelated.unlink()
+                    if replacement=='symlink':unrelated.symlink_to(wanted)
+                    if replacement=='fifo':os.mkfifo(unrelated)
+                    if replacement=='oversized':
+                        with unrelated.open('wb') as f:f.truncate(self.b.MAX_IMAGE+1)
+                    return files
+                with patch.object(self.b,'image_files',race):result=self.b.action(selected,'export',True)
+                self.assertTrue(result['ok'],result)
+                self.assertEqual(json.loads(Path(result['path']).read_text())['colors'],['#0000FF'])
+
+    def test_unpublished_export_keeps_previous_restore_through_failure_or_crash(self):
+        self.image('aaa.png');wanted=self.image('bbb.png',(0,0,255))
+        rows=self.b.catalog()['rows'];first_id=rows[0]['id']
+        selected=next(r['id'] for r in rows if r['preview']==str(wanted) and r['format']=='json')
+        first=self.b.action(first_id,'export',True);self.assertTrue(first['ok'],first)
+        previous=self.b.journal();target=self.b.export_root()/(selected.split(':')[1]+'.json')
+        for boundary in ('save-before','save-after','link-conflict','crash-before-link'):
+            with self.subTest(boundary=boundary):
+                if target.exists():target.unlink()
+                with self.b.State() as state:state.save(previous)
+                actual_save=self.b.State.save;actual_link=self.b.os.link
+                def save(state,value):
+                    if boundary=='save-before':raise OSError('disk full')
+                    actual_save(state,value)
+                    if boundary=='save-after':raise OSError('receipt directory fsync failed')
+                def link(src,dst,**kwargs):
+                    if boundary=='link-conflict':target.write_bytes(b'other writer')
+                    if boundary=='crash-before-link':os._exit(73)
+                    return actual_link(src,dst,**kwargs)
+                # A separate process is necessary: no finally/rollback runs after _exit.
+                pid=os.fork()
+                if pid==0:
+                    with patch.object(self.b.State,'save',save),patch.object(self.b.os,'link',link):
+                        result=self.b.action(selected,'export',True)
+                    os._exit(0 if not result['ok'] else 74)
+                _,status=os.waitpid(pid,0)
+                self.assertEqual(os.waitstatus_to_exitcode(status),73 if boundary=='crash-before-link' else 0)
+                self.assertEqual(self.b.journal(),previous,'failed/unpublished export consumed previous ownership')
+                self.assertEqual(Path(first['path']).read_bytes(),self.b.render(['#FF0000'],'json'))
+                if boundary=='link-conflict':
+                    self.assertEqual(target.read_bytes(),b'other writer');target.unlink()
+                else:self.assertFalse(target.exists())
+        restored=self.b.action(first_id,'restore',True);self.assertTrue(restored['ok'],restored)
+
     def test_restore_retains_held_fd_edit_after_quarantine_hash(self):
         import contextlib
         self.image();selected=self.b.catalog()['rows'][0]['id']
@@ -55,6 +215,89 @@ class BackendTests(unittest.TestCase):
         self.assertFalse(result['ok'])
         public=list(self.b.export_root().glob('*.json')) if self.b.export_root().exists() else []
         self.assertEqual(public,[],'export published without recoverable ownership receipt')
+
+    def test_receipt_exact_8192_bytes_is_read_but_8193_is_refused(self):
+        source=self.image();selected='palette:'+self.b.token(source)+':json'
+        exported=self.b.action(selected,'export',True);self.assertTrue(exported['ok'],exported)
+        previous=self.b.journal();target=Path(exported['path']);expected=target.read_bytes()
+        pending=dict(previous,file='a'*32+'.css',previous=previous)
+        published=dict(previous,previous={})
+        for kind,value in (('plain',previous),('unpublished',pending),('published',published)):
+            for size in (8192,8193):
+                with self.subTest(receipt=kind,size=size):
+                    data=json.dumps(value).encode();data+=b' '*(size-len(data));self.assertEqual(len(data),size)
+                    with self.b.State() as state:state.put('restore.json',data)
+                    receipt_path=self.b.state_path()/'restore.json';inode=receipt_path.stat().st_ino
+                    self.assertEqual(self.b.journal(),previous if size==8192 else {})
+                    self.assertEqual(self.b.export_actions(),['export','restore'] if size==8192 else ['export'])
+                    if size==8193:
+                        with patch.object(self.b,'run',wraps=self.b.run) as provider:
+                            result=self.b.action('restore:last','restore',True)
+                        self.assertFalse(result['ok'],result);provider.assert_not_called()
+                    self.assertEqual(receipt_path.read_bytes(),data);self.assertEqual(receipt_path.stat().st_ino,inode)
+                    self.assertEqual(target.read_bytes(),expected)
+        with self.b.State() as state:state.put('restore.json',json.dumps(pending).encode().ljust(8192,b' '))
+        restored=self.b.action('restore:last','restore',True);self.assertTrue(restored['ok'],restored)
+        self.assertEqual(Path(restored['path']).read_bytes(),expected);self.assertFalse(target.exists())
+
+    def test_previous_object_nesting_cannot_authorize_unowned_restore(self):
+        source=self.image();selected='palette:'+self.b.token(source)+':json'
+        exported=self.b.action(selected,'export',True);self.assertTrue(exported['ok'],exported)
+        previous=self.b.journal();target=Path(exported['path']);expected=target.read_bytes()
+        nested=dict(previous,metadata={'nested':{'object':{}}})
+        pending=dict(previous,file='a'*32+'.css',previous=nested)
+        with self.b.State() as state:state.save(pending)
+        self.assertEqual(self.b.journal(),nested);self.assertEqual(self.b.export_actions(),['export','restore'])
+        prefix=b'{"file":"'+b'a'*32+b'.css","previous":'
+        for deep in (prefix+b'{"x":'*1200+b'{}'+b'}'*1200+b'}',prefix+b'{"previous":'*600+b'{}'+b'}'*600+b'}'):
+            with self.subTest(receipt_bytes=len(deep)):
+                self.assertLess(len(deep),8192,'exercise nested-object fallback within the byte limit')
+                with self.b.State() as state:state.put('restore.json',deep)
+                receipt_path=self.b.state_path()/'restore.json';inode=receipt_path.stat().st_ino
+                # Parsed unknown metadata is not ownership; do not require an arbitrary JSON depth policy.
+                resolved=self.b.journal()
+                self.assertIsInstance(resolved,dict);self.assertFalse('selected' in resolved or 'file' in resolved)
+                self.assertEqual(self.b.export_actions(),['export'])
+                with patch.object(self.b,'run',wraps=self.b.run) as provider:
+                    result=self.b.action('restore:last','restore',True)
+                self.assertFalse(result['ok'],result);provider.assert_not_called()
+                self.assertEqual(receipt_path.read_bytes(),deep);self.assertEqual(receipt_path.stat().st_ino,inode)
+                self.assertEqual(target.read_bytes(),expected)
+        with self.b.State() as state:state.save(pending)
+        restored=self.b.action('restore:last','restore',True);self.assertTrue(restored['ok'],restored)
+        self.assertEqual(Path(restored['path']).read_bytes(),expected)
+
+    def test_repeated_interrupted_publications_do_not_nest_pending_receipts(self):
+        first=self.image();selected='palette:'+self.b.token(first)+':json'
+        exported=self.b.action(selected,'export',True);self.assertTrue(exported['ok'],exported)
+        previous=self.b.journal();public={Path(exported['path']):Path(exported['path']).read_bytes()}
+        for attempt in range(40):
+            with self.subTest(attempt=attempt):
+                source=self.image('retry-%02d.png'%attempt,(0,0,255));selected='palette:'+self.b.token(source)+':json'
+                target=self.b.export_root()/(selected.split(':')[1]+'.json');published=bool(attempt%2);actual_link=os.link
+                pid=os.fork()
+                if pid==0:
+                    def link(src,dst,**kwargs):
+                        if published:actual_link(src,dst,**kwargs)
+                        os._exit(73)
+                    with patch.object(os,'link',link):self.b.action(selected,'export',True)
+                    os._exit(74)
+                _,status=os.waitpid(pid,0);self.assertEqual(os.waitstatus_to_exitcode(status),73)
+                raw=(self.b.state_path()/'restore.json').read_bytes();self.assertLessEqual(len(raw),8192)
+                pending=json.loads(raw);self.assertEqual(pending['previous'],previous)
+                self.assertNotIn('previous',pending['previous'])
+                saved=self.b.journal()
+                if published:
+                    self.assertEqual(saved['selected'],selected);self.assertEqual(saved['inode'],target.stat().st_ino)
+                    public[target]=self.b.render(['#0000FF'],'json');previous=saved
+                else:
+                    self.assertEqual(saved,previous);self.assertFalse(target.exists())
+                self.assertEqual(self.b.export_actions(),['export','restore'])
+                for path,data in public.items():self.assertEqual(path.read_bytes(),data)
+        restored=self.b.action('restore:last','restore',True);self.assertTrue(restored['ok'],restored)
+        detached=self.b.export_root()/previous['file'];self.assertFalse(detached.exists())
+        self.assertEqual(Path(restored['path']).read_bytes(),public.pop(detached))
+        for path,data in public.items():self.assertEqual(path.read_bytes(),data)
 
     def test_deeply_nested_journal_fails_closed(self):
         with self.b.State() as state:state.put('restore.json',b'['*2000+b']'*2000)

@@ -155,7 +155,7 @@ def extract(p,timeout=3):
 def catalog():
     rows=[];skipped=0;deadline=time.monotonic()+5
     if not os.access(MAGICK,os.X_OK):
-        return {'rows':[],'message':'ImageMagick extractor unavailable; no packages are installed automatically.','actions':['export'],'actionLabel':'Export'}
+        return {'rows':[],'message':'ImageMagick extractor unavailable; no packages are installed automatically.','actions':export_actions(),'actionLabel':'Export'}
     files=image_files()
     for p in files[:32]:
         remaining=deadline-time.monotonic()
@@ -168,7 +168,7 @@ def catalog():
             rows.append({'id':'palette:'+identity+':'+fmt,'label':(p.name[:140]+' · '+fmt.upper()),'detail':' '.join(colors),'color':colors[0],'preview':str(p),'format':fmt})
     message='Preview colors from local wallpaper bytes. Select a JSON, CSS or GPL row to export only that format; no retint.' if rows else 'No extractable local wallpapers; add PNG/JPEG/WebP/BMP images to Pictures/Wallpapers.'
     if skipped or len(files)>32: message+=' Scan/extraction budget reached or unreadable images skipped; at most 32 wallpaper previews.'
-    return {'rows':rows,'message':message,'actions':['export']+(['restore'] if journal().get('file') else []),'actionLabel':'Export'}
+    return {'rows':rows,'message':message,'actions':export_actions(),'actionLabel':'Export'}
 
 
 class OperationError(ValueError): pass
@@ -242,13 +242,35 @@ class State:
 def journal():
     try:
         value=json.loads(read(state_path()/'restore.json',8192))
-        return value if isinstance(value,dict) else {}
+        if not isinstance(value,dict): return {}
+        if 'previous' in value:
+            previous=value.pop('previous')
+            if not isinstance(previous,dict): return {}
+            name=value.get('file')
+            if not isinstance(name,str) or not re.fullmatch(r'[a-f0-9]{32}\.(json|css|gpl)',name): return {}
+            try:
+                with opened(export_root()/name) as (_,info):
+                    published=(info.st_dev,info.st_ino)==(value.get('device'),value.get('inode'))
+            except (OSError,ValueError): published=False
+            if not published: return previous
+        return value
     except (OSError,ValueError): return {}
 
 PLUGIN='palette-studio'
 FORMATS=('json','css','gpl')
 
 def export_root(): return home()/'.local/share/omarchy-palette-studio/exports'
+
+def export_actions():
+    saved=journal();name=saved.get('file')
+    if isinstance(name,str) and re.fullmatch(r'[a-f0-9]{32}\.(json|css|gpl)',name):
+        try:
+            target=export_root()/name
+            if hashlib.sha256(read(target)).hexdigest()==saved.get('sha256'):
+                with opened(target) as (_,info):
+                    if (info.st_dev,info.st_ino)==(saved.get('device'),saved.get('inode')): return ['export','restore']
+        except (OSError,ValueError): pass
+    return ['export']
 
 def render(colors,fmt):
     if not colors or len(colors)>6 or not all(HEX.fullmatch(c) for c in colors): raise OperationError('Extractor returned invalid colors')
@@ -293,7 +315,11 @@ def perform(selected,verb):
         if verb!='export': raise OperationError('Palette Studio supports export, not desktop apply')
         parts=selected.split(':')
         if len(parts)!=3 or parts[0]!='palette' or parts[2] not in FORMATS: raise OperationError('Unknown palette selection')
-        p=next((p for p in image_files() if token(p)==parts[1]),None)
+        p=None
+        for candidate in image_files():
+            try: identity=token(candidate)
+            except (OSError,ValueError): continue
+            if identity==parts[1]: p=candidate;break
         if p is None: raise OperationError('Wallpaper changed or disappeared; refresh')
         colors=extract(p)
         if token(p)!=parts[1]: raise OperationError('Wallpaper changed during extraction; refresh')
@@ -308,10 +334,12 @@ def perform(selected,verb):
             try:
                 with os.fdopen(filefd,'wb') as stream:
                     stream.write(data);stream.flush();os.fsync(stream.fileno());info=os.fstat(stream.fileno())
-                # Ownership is durable before publication. A failed link cannot authorize deletion of another inode.
-                state.save({'selected':selected,'file':name,'sha256':hashlib.sha256(data).hexdigest(),'device':info.st_dev,'inode':info.st_ino})
+                receipt={'selected':selected,'file':name,'sha256':hashlib.sha256(data).hexdigest(),'device':info.st_dev,'inode':info.st_ino}
+                # Retain old authority across crashes until the exclusive link publishes this inode.
+                state.save(dict(receipt,previous=saved))
                 os.link(temporary,name,src_dir_fd=fd,dst_dir_fd=fd,follow_symlinks=False)
                 os.fsync(fd)
+                state.save(receipt)
             finally: os.unlink(temporary,dir_fd=fd)
         finally: os.close(fd)
         if read(target)!=data: raise OperationError('Export readback failed; inspect the destination')
@@ -320,7 +348,10 @@ def perform(selected,verb):
 def action(selected,verb,apply=False):
     if not apply: return {'ok':False,'message':'Explicit --apply is required; nothing changed.'}
     if not text(selected,160) or verb not in ('apply','restore','export'): return {'ok':False,'message':'Invalid selection or action'}
-    try: return perform(selected,verb)
+    try:
+        result=perform(selected,verb)
+        result['actions']=export_actions()
+        return result
     except OperationError as error: return {'ok':False,'message':str(error)[:600]}
     except (OSError,ValueError,KeyError,subprocess.SubprocessError): return {'ok':False,'message':'Local operation failed; check provider, permissions and safe roots. Partial state may remain; refresh.'}
 
