@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "hydeRepository": "https://github.com/HyDE-Project/HyDE",
+  "hydeCommit": "fa2fd57afc7203b1b5653d3271f3a57ea3873f97",
+  "sourceKind": "Read-only audited cached references and installed provider source; no donor code or assets copied",
+  "sources": {
+    "HyDE/LICENSE": {
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "bytes": 35149,
+      "commit": "fa2fd57afc7203b1b5653d3271f3a57ea3873f97"
+    },
+    "HyDE/Configs/.config/hyde/wallbash/README.md": {
+      "sha256": "bbe40bd4c44f3e0ea0049d0e4292f75f19f237ac0c2f32091864e92ab4e8f58b",
+      "bytes": 3330,
+      "commit": "fa2fd57afc7203b1b5653d3271f3a57ea3873f97"
+    },
+    "/usr/share/omarchy/shell/plugins/background/Background.qml": {
+      "sha256": "bc0825a58c0cd01fe680c4628e1836e1cad74c7767941bb2e245b8394787f15c",
+      "bytes": 18730
+    },
+    "imagemagick": {
+      "packageFields": [
+        "Name            : imagemagick",
+        "Version         : 7.1.2.34-2",
+        "Licenses        : ImageMagick"
+      ]
+    },
+    "matugen": {
+      "packageFields": [
+        "Name            : matugen",
+        "Version         : 4.2.0-1",
+        "Licenses        : GPL-2.0-only"
+      ]
+    },
+    "aether": {
+      "packageFields": [
+        "Name            : aether",
+        "Version         : 4.32.0-2",
+        "Licenses        : MIT"
+      ]
+    }
+  },
+  "bundledImagesFontsDatasets": []
+}

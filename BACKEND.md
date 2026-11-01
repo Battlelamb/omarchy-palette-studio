@@ -1,0 +1,56 @@
+# Palette Studio backend
+
+## Actual extraction and selective export
+
+Uses the already-installed ImageMagick CLI; no new extractor, packages or automatic recoloring daemon. The installed matugen help was inspected (4.2.0 supports --dry-run); Aether 4.32.0 is present. ImageMagick was selected because a fixed in-memory decode/quantize pipeline needs neither user config nor arbitrary Aether/Wallbash templates. This complements rather than replaces either existing color workflow.
+
+Reads the same bounded fixed local wallpaper roots as Wallpaper Browser, independently: Pictures/Wallpapers and Omarchy backgrounds plus one collection level; installed stock/user theme backgrounds; staged current-theme backgrounds. The catalog decodes at most 32 wallpapers within a five-second extraction budget and emits three format-specific rows per extracted image: JSON, CSS, GIMP GPL palette. Each row previews the local wallpaper, displays a first-color swatch and lists all up-to-six extracted hex colors in detail. No special UI is required beyond the parent's row preview/color, search, Export and Restore; choosing a row selects its export format. All 512 bounded file members remain eligible for fresh action validation, even beyond the 32-image preview budget.
+
+Selected source bytes are read through safe FDs, change-checked, and supplied through a memfd to a **fixed magic-derived PNG/JPEG/WEBP/BMP stdin coder**, not an interpreted filename. The installed decoder runs with isolated HOME=/nonexistent, fixed system ImageMagick policy, one thread, 128 MiB memory/map, disk cache disabled, 16384 dimension limits and bounded runtime/output. It downsamples to 64x64, composites transparency on black, quantizes to six colors, and validates actual 8-bit RGB output. This is a representative sampled palette, not Material/Wallbash role semantics, perceptual ranking, contrast certification or a full-resolution histogram. Missing/failed extraction yields honest empty/skipped data, never fabricated colors.
+
+Primary `export` creates only the selected fixed format at `$HOME/.local/share/omarchy-palette-studio/exports/<source-identity>.<json|css|gpl>`. JSON contains schemaVersion/colors; CSS contains :root --palette-N properties; GPL is a standard GIMP palette. There is no arbitrary destination, postprocessing, app configuration edit, script execution or desktop apply verb. A complete temporary file and fsynced ownership receipt precede exclusive hard-link publication, then exact bytes are read back. Existing identical exports are idempotent; different bytes/symlinks are refused, not overwritten, so no destructive overwrite/backup mechanism is needed.
+
+## Restore and limits
+
+Restore detaches only the last **newly created** export from its public name; it does **not delete its bytes**. The receipt records selected ID/format/file name/hash plus device/inode. Source changes need not block restoration of the owned export: use the original selected ID or `restore:last`. Detected external edits/replacements are refused. Restore renames to a private random `.restore-<24 hex digits>` file in the same exports directory and rechecks hash/inode. These checks establish identity/content only at those instants: an editor holding the inode open can still write after verification. Therefore even a verified file is retained, never unlinked on success. The success JSON `path` and message identify this recovery file and report detachment/retention, not deletion or immutable content. The one-level ownership receipt is then cleared because that public export was detached, so repeated Restore is not authorized. No persistent recovery manifest is created; retained files remain discoverable as `exports/.restore-*` even if the response is lost.
+
+If a race is detected after rename, the file is put back using a no-overwrite hard link; the recovery name is removed only after that other link preserves the inode. If an editor has occupied the public name, both it and the quarantine survive and Restore fails. Other exports and user files are untouched. Retained files may continue receiving held-FD edits even after success; inspect them with hidden files shown and close writers before any deliberate manual recovery/pruning. There is no automatic quarantine cleanup or storage quota, so explicit restores can accumulate retained files. It is not a general cleanup tool and never undoes app configurations because none were changed.
+
+No broad generated theme tree, templates, arbitrary Wallbash target headers/commands, automatic wallpaper set, hooks, cloud API or config watching. Export files can accumulate through explicit actions; their individual size is bounded and no service grows them automatically. The fixed decoder/policy still depends on the installed ImageMagick build and codec security; no hostile-media/GUI certification is claimed.
+
+## Verified result
+
+Restore ownership fix R1: 35 backend cases pass using the current masked `scripts/run-tests.py --backend-only` runner. The named regression `test_restore_retains_held_fd_edit_after_quarantine_hash` was first observed failing on the unfixed backend, then passing after the minimal fix. Immutable `release-output/restore-r1-{red,green}.{json,txt}` preserve that cycle; `release-output/restore-ownership-fix-result.json` records final source hashes, counts and limits. Earlier stock probes below are historical, not rerun or live integration evidence for this fix.
+
+34 unittest cases passed in the final masked offline sandbox, including real installed PNG/JPEG/WebP/BMP decoders, exact red/blue palettes, all export formats, CLI export/restore, no overwrite, symlink rejection, stale/racing sources, interrupted receipt publication, restore edit race preservation, no Wallbash template execution, missing provider and output/deadline controls. A five-second real-stock read-only probe produced 66 rows (22 extracted wallpaper palettes × three formats), each with local preview and actual color; extraction/scan limits were honestly reported. No user themes/configs or wallpaper were modified.
+
+## Contract and safety
+
+System Python 3.11+ / standard library only; tested with installed Python 3.14.8. No cross-plugin imports, new packages, framework, daemon, network, installer, or autostart. Runtime paths do not depend on cwd. The UI calls:
+
+```
+/usr/bin/python3 runtime/0.1.0/backend.py catalog
+/usr/bin/python3 runtime/0.1.0/backend.py action --id ID --verb VERB --apply
+```
+
+Catalog returns one JSON object with bounded unique rows, actions and actionLabel. Explicit actions return `{ok,message}` and optional `path`; CLI exits nonzero for any unconfirmed/partial result. No action is performed without `--apply`. Unknown/stale IDs are rejected against fresh bounded membership. `restore:last` is also accepted only when a matching durable receipt exists; the generic UI should restore with the original selected ID. A different selected row is not authorization to restore the last operation.
+
+All selected source paths come from fixed local roots, not QML-supplied paths. Directory traversal uses directory FDs and O_NOFOLLOW for every component; symlinked roots, files and ancestors are rejected. The sole deliberate symlink reader is Omarchy's known current-background link; its target is separately allowlisted and opened safely before use. No arbitrary root/config/template input or remote thumbnails. Local previews are original installed/user files, not bundled art. Filenames are bounded/plain text; control characters are excluded. Image admission checks file type, byte limit and signatures; PNG dimensions are additionally capped. Catalog image previews are not a general-purpose hostile-media sanitizer; Qt/codec rendering is outside the backend suite.
+
+Limits: 1024 entries per scanned directory (an overfull directory is skipped, not partially trusted), 512 wallpaper roots/files, 32 MiB per image, 64 KiB metadata reads, 8192-byte restore receipt, 256 displayed rows, <=1 MiB CLI output. Wallpaper identity is a hash of literal absolute path plus device/inode/size/mtime/ctime, not display text. Replacement invalidates the ID. No arbitrary recursive disk crawl. Content changes during bounded reads are rejected. Process argv is literal, shell=False; stdout and stderr each capped at 64 KiB, hard deadline and process-group SIGKILL on interruption/overflow/timeout, including pipe-holding descendants after their parent exits. Provider stderr is summarized rather than dumping paths/private hook output to the UI.
+
+Plugin-owned state is under `$HOME/.local/state/omarchy-<slug>/`, private modes with an exclusive nonblocking lock and atomic/fsynced receipts. Existing state symlinks and special-file locks are refused. This is not an isolation boundary against malicious programs running as the same Unix user, nor protection from a provider that intentionally daemonizes into another session. Existing Omarchy setters can have their own broad side effects.
+
+## Repeatable offline verification
+
+From this project's root, with TMPDIR pointing at the approved scratch directory:
+
+```
+TMPDIR=/home/leviathan/.hermes/cache/scratch env -u PYTHONPATH /usr/bin/python3 scripts/run-tests.py --backend-only
+```
+
+The runner uses bwrap --unshare-all --clearenv, read-only source/usr/system ImageMagick policy, empty stock fixture, fake HOME, private /run and /tmp, and no host sockets, display or network. It also masks actual theme/background/shell executables with refusal stubs. Every successful setter in tests is a fixture shim inside the box. Inside the cleared box, tests execute `/usr/bin/python3 -m unittest discover -s tests -p 'test_*.py' -v`; the outer invocation explicitly clears PYTHONPATH too. The current runner streams results without creating receipts; this fix captured stdout/stderr and source hashes into new exclusive-create receipt files. Old receipts were not overwritten. Do not run unittest on the live session.
+
+Feature RED/GREEN receipts and extra boundary-control receipts are retained under ignored release-output. An initial missing-method discovery error is retained alongside its corrected assertion-based RED. Runtime feature slices were tested before implementation; additional passing characterization controls were added for existing guards. The first final portable-runner attempt failed before tests because a destination was a symlink; canonical target deduplication fixed it without changing any test threshold. That failed receipt is preserved.
+
+No GUI, compositor setters, native renderer pixels, live theme/background changes, installation, enablement, package installation, publication or push was exercised. Headless fixture shims establish adapter logic, not successful live desktop integration. A separate read-only stock catalog probe uses real installed theme/image data in an offline fake-HOME box with setters masked. See release-output/backend-result.json for exact counts, source hashes and receipt names. Source provenance is in data/source-ledger.json and NOTICE.backend.md.
