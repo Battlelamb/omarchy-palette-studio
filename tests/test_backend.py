@@ -10,7 +10,8 @@ from unittest.mock import patch
 import struct
 import zlib
 
-BACKEND = Path(__file__).resolve().parents[1] / "runtime/0.1.0/backend.py"
+ROOT = Path(__file__).resolve().parents[1]
+BACKEND = ROOT / Path(json.loads((ROOT / 'manifest.json').read_text())['entryPoints']['overlay']).parent / 'backend.py'
 def png(rgb=(255,0,0)):
     def chunk(kind, data):
         return struct.pack('!I',len(data))+kind+data+struct.pack('!I',zlib.crc32(kind+data)&0xffffffff)

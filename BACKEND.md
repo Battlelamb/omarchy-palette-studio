@@ -33,8 +33,8 @@ Restore ownership fix R1: 35 backend cases pass using the current masked `script
 System Python 3.11+ / standard library only; tested with installed Python 3.14.8. No cross-plugin imports, new packages, framework, daemon, network, installer, or autostart. Runtime paths do not depend on cwd. The UI calls:
 
 ```
-/usr/bin/python3 runtime/0.1.0/backend.py catalog
-/usr/bin/python3 runtime/0.1.0/backend.py action --id ID --verb VERB --apply
+/usr/bin/python3 runtime/0.2.0/backend.py catalog
+/usr/bin/python3 runtime/0.2.0/backend.py action --id ID --verb VERB --apply
 ```
 
 Catalog returns one JSON object with bounded unique rows, actions and actionLabel. Explicit actions return `{ok,message}` and optional `path`; CLI exits nonzero for any unconfirmed/partial result. Successful Palette export/Restore also returns an explicit `actions` array: `['export','restore']` only when the receipt's safe public file still matches its hash/device/inode, otherwise `['export']`. This includes identical-existing exports without claiming ownership of external bytes; a different valid previous receipt remains available. Failed actions never return these success hints. The UI can update capabilities without cataloguing/decoding unchanged previews; explicit Refresh remains available and every export still validates fresh membership and decodes its selected source. No cache, watcher or daemon is added. Unrelated candidates that disappear or become unsafe between enumeration and token generation are skipped; stale/unsafe selected sources still fail closed. No action is performed without `--apply`. `restore:last` is accepted only when a matching durable receipt exists and does not require a live catalog row. A different selected row is not authorization to restore the last operation.
@@ -50,11 +50,11 @@ Plugin-owned state is under `$HOME/.local/state/omarchy-<slug>/`, private modes 
 From this project's root, with TMPDIR pointing at the approved scratch directory:
 
 ```
-TMPDIR=/home/leviathan/.hermes/cache/scratch env -u PYTHONPATH /usr/bin/python3 scripts/run-tests.py --backend-only
+TMPDIR="${TMPDIR:?Set TMPDIR to an existing private scratch directory}" env -u PYTHONPATH /usr/bin/python3 scripts/run-tests.py --backend-only
 ```
 
 The runner uses bwrap --unshare-all --clearenv, read-only source/usr/system ImageMagick policy, empty stock fixture, fake HOME, private /run and /tmp, and no host sockets, display or network. It also masks actual theme/background/shell executables with refusal stubs. Every successful setter in tests is a fixture shim inside the box. Inside the cleared box, tests execute `/usr/bin/python3 -m unittest discover -s tests -p 'test_*.py' -v`; the outer invocation explicitly clears PYTHONPATH too. The current runner streams results without creating receipts; this fix captured stdout/stderr and source hashes into new exclusive-create receipt files. Old receipts were not overwritten. Do not run unittest on the live session.
 
 Feature RED/GREEN receipts and extra boundary-control receipts are retained under ignored release-output. An initial missing-method discovery error is retained alongside its corrected assertion-based RED. Runtime feature slices were tested before implementation; additional passing characterization controls were added for existing guards. The first final portable-runner attempt failed before tests because a destination was a symlink; canonical target deduplication fixed it without changing any test threshold. That failed receipt is preserved.
 
-No GUI, compositor setters, native renderer pixels, live theme/background changes, installation, enablement, package installation, publication or push was exercised. Headless fixture shims establish adapter logic, not successful live desktop integration. A separate read-only stock catalog probe uses real installed theme/image data in an offline fake-HOME box with setters masked. See release-output/backend-result.json for exact counts, source hashes and receipt names. Source provenance is in data/source-ledger.json and NOTICE.backend.md.
+No GUI, compositor setters, native renderer pixels, live theme/background changes, installation, enablement, package installation, publication or push was exercised. Headless fixture shims establish adapter logic, not successful live desktop integration. A separate read-only stock catalog probe uses real installed theme/image data in an offline fake-HOME box with setters masked. See release-output/backend-result.json for exact counts, source hashes and receipt names. Source provenance is in `runtime/0.2.0/data/source-ledger.json` and NOTICE.backend.md.
