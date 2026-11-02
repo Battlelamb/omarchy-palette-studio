@@ -1,0 +1,27 @@
+{
+  "search": "Search palette sources…",
+  "loading": "Loading…",
+  "empty": "No matching items",
+  "loadFailed": "Unable to load catalogue. Check the backend and try Refresh.",
+  "apply": "Apply",
+  "copy": "Copy",
+  "launch": "Launch",
+  "export": "Export palette",
+  "restore": "Restore",
+  "confirm": "Keep effect",
+  "select": "Select an item",
+  "refresh": "Refresh",
+  "working": "Working…",
+  "keys": "Arrows select · Enter export · Esc close",
+  "results": {
+    "one": "%1 export option shown",
+    "other": "%1 export options shown"
+  },
+  "title": "Palette Studio",
+  "explore": "Explore",
+  "configure": "Configure",
+  "clearSearch": "Clear search",
+  "details": "Selection details",
+  "subtitle": "Local images. A palette to take with you.",
+  "safety": "Export only; no desktop retint. Restore retains a private quarantine."
+}
