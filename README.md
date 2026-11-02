@@ -8,7 +8,7 @@ Extract colors from local wallpaper bytes and export a chosen JSON, CSS or GPL p
 
 ## Install and open
 
-Unpublished v0.2.0 candidate. The repository below is a **proposed publication target**, not a claim that it exists. After publication:
+Unpublished v0.2.1 candidate. Compact selected-detail readability has fresh private native checks; v0.2.0 qualification is historical (see validation). The repository below is a **proposed publication target**, not a claim that it exists. After publication:
 
 ```sh
 omarchy plugin add https://github.com/Battlelamb/omarchy-palette-studio --enable
