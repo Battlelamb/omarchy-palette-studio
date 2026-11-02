@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "leviathan.palette-studio",
   "name": "Palette Studio",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": "Ömer Eren",
   "license": "GPL-3.0-only",
   "description": "Extract colors from local wallpaper bytes and export a chosen JSON, CSS or GPL palette entry without retinting the desktop. Restore quarantines only an owned export; it does not delete retained quarantine data. Open: omarchy-shell shell summon leviathan.palette-studio. Type to search; arrows select; Enter acts; Esc closes.",
@@ -11,6 +11,6 @@
   ],
   "keepLoaded": true,
   "entryPoints": {
-    "overlay": "runtime/0.3.0/PaletteStudio.qml"
+    "overlay": "runtime/0.4.0/PaletteStudio.qml"
   }
 }

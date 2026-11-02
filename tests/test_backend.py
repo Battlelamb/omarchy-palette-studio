@@ -55,10 +55,10 @@ class BackendTests(unittest.TestCase):
         source=self.image();selected='palette:'+self.b.token(source)+':json'
         self.assertTrue(self.b.action(selected,'export',True)['ok'])
         source.unlink();self.b.MAGICK='/missing-extractor'
-        value=self.b.catalog();self.assertEqual(value['rows'],[]);self.assertEqual(value['actions'],['export','favorite','copy-color','restore'])
+        value=self.b.catalog();self.assertEqual(value['rows'],[]);self.assertEqual(value['actions'],['export','favorite','copy-color','copy-css','restore'])
         self.assertFalse(self.b.action('palette:other:json','restore',True)['ok'])
         result=self.b.action('restore:last','restore',True);self.assertTrue(result['ok'],result)
-        self.assertEqual(result['actions'],['export','favorite','copy-color'])
+        self.assertEqual(result['actions'],['export','favorite','copy-color','copy-css'])
 
     def test_disappearing_selected_source_still_refuses_before_extract(self):
         source=self.image();selected='palette:'+self.b.token(source)+':json';actual=self.b.image_files
@@ -78,7 +78,7 @@ class BackendTests(unittest.TestCase):
         self.assertFalse(failed['ok']);self.assertNotIn('actions',failed)
         self.assertEqual(self.b.journal(),{});self.assertEqual(target.read_bytes(),expected)
         retry=self.b.action(selected,'export',True)
-        self.assertTrue(retry['ok'],retry);self.assertEqual(retry.get('actions'),['export','favorite','copy-color'])
+        self.assertTrue(retry['ok'],retry);self.assertEqual(retry.get('actions'),['export','favorite','copy-color','copy-css'])
         self.assertFalse(self.b.action('restore:last','restore',True)['ok'])
         self.assertEqual(target.read_bytes(),expected)
 
@@ -138,23 +138,23 @@ class BackendTests(unittest.TestCase):
         for repeat in range(2):
             with patch.object(self.b,'extract',wraps=self.b.extract) as decode,patch.object(self.b,'catalog',side_effect=AssertionError('catalog reload')):
                 result=self.b.action(selected,'export',True)
-            self.assertTrue(result['ok'],result);self.assertEqual(result.get('actions'),['export','favorite','copy-color','restore'])
+            self.assertTrue(result['ok'],result);self.assertEqual(result.get('actions'),['export','favorite','copy-color','copy-css','restore'])
             self.assertEqual(decode.call_count,1)
         restored=self.b.action('restore:last','restore',True)
-        self.assertTrue(restored['ok'],restored);self.assertEqual(restored.get('actions'),['export','favorite','copy-color'])
+        self.assertTrue(restored['ok'],restored);self.assertEqual(restored.get('actions'),['export','favorite','copy-color','copy-css'])
         # Matching external bytes are not ownership, nor permission to detach them.
         target=Path(result['path']);target.write_bytes(self.b.render(['#FF0000'],'json'));stamp=target.stat().st_mtime_ns
         identical=self.b.action(selected,'export',True)
-        self.assertTrue(identical['ok'],identical);self.assertEqual(identical.get('actions'),['export','favorite','copy-color'])
+        self.assertTrue(identical['ok'],identical);self.assertEqual(identical.get('actions'),['export','favorite','copy-color','copy-css'])
         self.assertEqual(target.stat().st_mtime_ns,stamp)
         self.assertFalse(self.b.action('restore:last','restore',True)['ok'])
         # An identical existing file must not consume a different owned receipt.
         other=self.image('blue.png',(0,0,255));other_id='palette:'+self.b.token(other)+':css'
         self.assertTrue(self.b.action(other_id,'export',True)['ok'])
         previous=self.b.journal();identical=self.b.action(selected,'export',True)
-        self.assertEqual(identical.get('actions'),['export','favorite','copy-color','restore']);self.assertEqual(self.b.journal(),previous)
+        self.assertEqual(identical.get('actions'),['export','favorite','copy-color','copy-css','restore']);self.assertEqual(self.b.journal(),previous)
         (self.b.export_root()/previous['file']).write_bytes(b'external edit')
-        self.assertEqual(self.b.action(selected,'export',True).get('actions'),['export','favorite','copy-color'])
+        self.assertEqual(self.b.action(selected,'export',True).get('actions'),['export','favorite','copy-color','copy-css'])
         target.write_bytes(b'other writer')
         failed=self.b.action(selected,'export',True)
         self.assertFalse(failed['ok']);self.assertNotIn('actions',failed)
@@ -263,7 +263,7 @@ class BackendTests(unittest.TestCase):
                     with self.b.State() as state:state.put('restore.json',data)
                     receipt_path=self.b.state_path()/'restore.json';inode=receipt_path.stat().st_ino
                     self.assertEqual(self.b.journal(),previous if size==8192 else {})
-                    self.assertEqual(self.b.export_actions(),['export','favorite','copy-color','restore'] if size==8192 else ['export','favorite','copy-color'])
+                    self.assertEqual(self.b.export_actions(),['export','favorite','copy-color','copy-css','restore'] if size==8192 else ['export','favorite','copy-color','copy-css'])
                     if size==8193:
                         with patch.object(self.b,'run',wraps=self.b.run) as provider:
                             result=self.b.action('restore:last','restore',True)
@@ -281,7 +281,7 @@ class BackendTests(unittest.TestCase):
         nested=dict(previous,metadata={'nested':{'object':{}}})
         pending=dict(previous,file='a'*32+'.css',previous=nested)
         with self.b.State() as state:state.save(pending)
-        self.assertEqual(self.b.journal(),nested);self.assertEqual(self.b.export_actions(),['export','favorite','copy-color','restore'])
+        self.assertEqual(self.b.journal(),nested);self.assertEqual(self.b.export_actions(),['export','favorite','copy-color','copy-css','restore'])
         prefix=b'{"file":"'+b'a'*32+b'.css","previous":'
         for deep in (prefix+b'{"x":'*1200+b'{}'+b'}'*1200+b'}',prefix+b'{"previous":'*600+b'{}'+b'}'*600+b'}'):
             with self.subTest(receipt_bytes=len(deep)):
@@ -291,7 +291,7 @@ class BackendTests(unittest.TestCase):
                 # Parsed unknown metadata is not ownership; do not require an arbitrary JSON depth policy.
                 resolved=self.b.journal()
                 self.assertIsInstance(resolved,dict);self.assertFalse('selected' in resolved or 'file' in resolved)
-                self.assertEqual(self.b.export_actions(),['export','favorite','copy-color'])
+                self.assertEqual(self.b.export_actions(),['export','favorite','copy-color','copy-css'])
                 with patch.object(self.b,'run',wraps=self.b.run) as provider:
                     result=self.b.action('restore:last','restore',True)
                 self.assertFalse(result['ok'],result);provider.assert_not_called()
@@ -326,7 +326,7 @@ class BackendTests(unittest.TestCase):
                     public[target]=self.b.render(['#0000FF'],'json');previous=saved
                 else:
                     self.assertEqual(saved,previous);self.assertFalse(target.exists())
-                self.assertEqual(self.b.export_actions(),['export','favorite','copy-color','restore'])
+                self.assertEqual(self.b.export_actions(),['export','favorite','copy-color','copy-css','restore'])
                 for path,data in public.items():self.assertEqual(path.read_bytes(),data)
         restored=self.b.action('restore:last','restore',True);self.assertTrue(restored['ok'],restored)
         detached=self.b.export_root()/previous['file'];self.assertFalse(detached.exists())
@@ -358,7 +358,8 @@ class BackendTests(unittest.TestCase):
         r,value=cli(verb);self.assertEqual(r.returncode,0,value);self.assertTrue(value['ok'])
         r,value=cli('restore');self.assertEqual(r.returncode,0,value);self.assertTrue(value['ok'])
     def test_sandbox_has_no_live_ipc_home_or_network(self):
-        self.assertFalse(Path('/srv/projects').exists());self.assertFalse(Path('/home/leviathan').exists())
+        self.assertFalse(Path('/srv').exists())
+        self.assertEqual(sorted(p.name for p in Path('/home').iterdir()),['test'])
         self.assertFalse(Path('/run/user').exists())
         interfaces=[line.split(':')[0].strip() for line in Path('/proc/net/dev').read_text().splitlines()[2:]]
         self.assertEqual(interfaces,['lo'])

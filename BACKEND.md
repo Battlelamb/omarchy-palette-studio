@@ -1,18 +1,19 @@
-# Palette Studio backend — v0.3.0
+# Palette Studio backend — v0.4.0
 
 ## Exact CLI
 
 From the plugin checkout (source/data lookup does not otherwise depend on cwd):
 
 ```sh
-/usr/bin/python3 runtime/0.3.0/backend.py catalog
-/usr/bin/python3 runtime/0.3.0/backend.py preferences
-/usr/bin/python3 runtime/0.3.0/backend.py preferences --apply --payload '{"options":{"style":"pastel","colorCount":8,"favoritesOnly":false}}'
-/usr/bin/python3 runtime/0.3.0/backend.py action --id PALETTE-ID-FROM-CATALOG --verb favorite --apply
-/usr/bin/python3 runtime/0.3.0/backend.py action --id PALETTE-ID-FROM-CATALOG --verb copy-color --apply --payload '{"index":0}'
-/usr/bin/python3 runtime/0.3.0/backend.py action --id PALETTE-ID-FROM-CATALOG --verb export --apply
-/usr/bin/python3 runtime/0.3.0/backend.py action --id restore:last --verb restore --apply
-/usr/bin/python3 runtime/0.3.0/backend.py preferences --apply --payload '{"reset":true}'
+/usr/bin/python3 runtime/0.4.0/backend.py catalog
+/usr/bin/python3 runtime/0.4.0/backend.py preferences
+/usr/bin/python3 runtime/0.4.0/backend.py preferences --apply --payload '{"options":{"style":"pastel","colorCount":8,"favoritesOnly":false}}'
+/usr/bin/python3 runtime/0.4.0/backend.py action --id PALETTE-ID-FROM-CATALOG --verb favorite --apply
+/usr/bin/python3 runtime/0.4.0/backend.py action --id PALETTE-ID-FROM-CATALOG --verb copy-color --apply --payload '{"index":0}'
+/usr/bin/python3 runtime/0.4.0/backend.py action --id PALETTE-ID-FROM-CATALOG --verb copy-css --apply
+/usr/bin/python3 runtime/0.4.0/backend.py action --id PALETTE-ID-FROM-CATALOG --verb export --apply
+/usr/bin/python3 runtime/0.4.0/backend.py action --id restore:last --verb restore --apply
+/usr/bin/python3 runtime/0.4.0/backend.py preferences --apply --payload '{"reset":true}'
 ```
 
 Replace the placeholder with an exact current catalog ID, including its `json` / `css` / `gpl` suffix. **Only `copy-color` accepts an action payload**: exactly `{"index":N}`, where N is a JSON integer (not boolean), zero-based and inside the freshly extracted palette. Other verbs reject any payload. Arbitrary text, output paths, shell commands and postprocessing fields are not supported.
@@ -23,6 +24,9 @@ Commands are exactly `catalog`, `preferences`, `action`; unknown/abbreviated opt
 
 | Key | Type | Default | Allowed values |
 | --- | --- | --- | --- |
+| `density` | enum | `comfortable` | `comfortable`, `compact` (native UI only) |
+| `layout` | enum | `grid` | `grid`, `list` (native UI only) |
+| `sortOrder` | enum | `default` | `default`, `name`, `favorites-first` (stable native sorting) |
 | `style` | enum | `vibrant` | `vibrant`, `muted`, `pastel`, `monochrome`, `high-contrast` |
 | `colorCount` | integer | 6 | 2–16 inclusive; bool/float/string refused |
 | `favoritesOnly` | boolean | false | JSON boolean only |
@@ -31,7 +35,7 @@ Preference responses contain `{ok,preferences,settingsSchema,message}`. Document
 
 The independent sibling `preferences.py` supplies bounded validated regular-file reads, a private locked atomic store and explicit corruption refusal. Location: absolute `XDG_CONFIG_HOME` or `$HOME/.config`, followed by `omarchy/lego/palette-studio/preferences.json`. Successful copy/export updates recent only after actual helper/export acceptance. A subsequent preference-storage error adds a warning while preserving the truthful external result. Restore does not read preferences and remains usable if they are corrupt.
 
-Catalog emits three format-specific rows per decoded image, preserving baseline fields and adding `favorite`, `category` (style), `swatches` and structured `contrast`. Backend favorites filtering precedes row emission. Primary verb is `export`; secondary fixed verbs are `favorite`, `copy-color`, conditional `restore`. Action capability hints include those secondary verbs without forcing a catalog reload/decode.
+Catalog emits three format-specific rows per decoded image, preserving baseline fields and adding `favorite`, `category` (style), `swatches` and structured `contrast`. Backend favorites filtering precedes row emission. Primary verb is `export`; secondary fixed verbs are `favorite`, `copy-color`, `copy-css`, conditional `restore`. Action capability hints include those secondary verbs without forcing a catalog reload/decode.
 
 Row IDs are `palette:<32-lowercase-hex>:<json|css|gpl>`. For default Vibrant /6, the identity stays the existing literal path/device/inode/size/mtime/ctime source token. Nondefault options hash that source token plus style/count, separating different output variants and refusing stale-settings selections. A single operation freezes its preference options for membership and extraction.
 
@@ -61,6 +65,12 @@ For each resulting #RRGGBB value, normalized sRGB channels are linearized using 
 
 `copy-color` revalidates current style/source membership, decodes only the selected image, rechecks its identity and validates the index before invoking literal `wl-copy --type text/plain;charset=utf-8` with the selected hex bytes on stdin. Exit0 without stderr confirms helper acceptance, not a later paste. No arbitrary clipboard payload or shell evaluation exists.
 
+### Copy CSS palette
+
+`copy-css` requires explicit `--apply`, accepts **no payload**, and works from any freshly validated JSON/CSS/GPL row. It freezes current style/count options, resolves the source against full bounded image membership, extracts fresh colors, rechecks its identity and reuses `render(colors,'css')`. No stale row swatches or caller colors are accepted. Literal `wl-copy --type text/plain;charset=utf-8` receives only the rendered bytes on stdin; exit0 without stderr confirms helper acceptance, not later paste behavior. No clipboard read/history, output path, caller prefix/template/exec or desktop retint exists. Successful copy uses the same recent/warning behavior as individual copy without creating exports, taking export ownership, changing Restore receipts or consuming quarantine files.
+
+The exact UTF-8/ASCII format is `:root {` plus LF; then `  --palette-N: #RRGGBB;` plus LF for each color, numbered from 1 in extracted/style order; then `}` plus final LF. The existing renderer validates 1–16 `#RRGGBB` colors before any clipboard invocation. No dependence on the selected row's export suffix is introduced.
+
 ## Export ownership and Restore (retained hardening)
 
 Exports go only to `$HOME/.local/share/omarchy-palette-studio/exports/<identity>.<json|css|gpl>`. JSON contains schemaVersion/colors; CSS has :root --palette-N properties; GPL is a standard GIMP palette. No arbitrary destination or app-config edits. Existing identical bytes are idempotent; different bytes/symlinks are refused rather than overwritten.
@@ -70,6 +80,8 @@ A complete fsynced temporary file and ownership receipt precede exclusive hard-l
 Restore accepts the original owned selected ID or `restore:last`, not an unrelated selection, without requiring a live source/catalog/extractor. The receipt records ID, filename, hash, device and inode. Restore checks identity/content, then renames the owned export into a private random `.restore-<24-hex>` file in the same exports directory and rechecks it. **Bytes are retained, not deleted**, because an editor holding the inode open can write after verification. Success JSON `path` names that retained recovery file; the one-level receipt is cleared. Other exports/user files stay untouched.
 
 A race detected after rename attempts no-overwrite hard-link recovery of the public name; the quarantine is removed only after another link preserves its inode. If a concurrent editor occupies the public name, both it and the quarantine survive and Restore fails. Held-FD writers can keep changing retained data after success; inspect hidden recovery files and close writers before deliberate manual recovery/pruning. No automatic recovery manifest, cleanup quota or total-export storage quota is claimed.
+
+Common display keys are literal, independent enum options saved/reset by the existing helper. Defaults preserve earlier behavior; native UI applies density, layout and stable sorting. They do not change source tokens, safe roots, action membership, Restore, store budgets or wire framing. Existing stores that omit the new keys receive defaults in memory, without a read-time migration write.
 
 ## Limits and offline verification
 
@@ -83,4 +95,4 @@ Use only the shipped offline runner, with `TMPDIR` naming an existing private sc
 env -u PYTHONPATH /usr/bin/python3 scripts/run-tests.py --backend-only
 ```
 
-The bwrap runner clears HOME/env, masks production setters and removes network/live sockets; decoder tests exercise the installed codecs, copy tests controlled clipboard helpers. Genuine feature/regression RED/GREEN logs are in `release-output/v030-tdd/`; final commands/counts/hashes and remaining integration criteria are in `release-output/v030-result.json`. No live setter, GUI/pixel test, hosted CI, installation or publication is implied. Provenance: NOTICE.backend.md and `runtime/0.3.0/data/source-ledger.json`.
+The bwrap runner clears HOME/env, masks production setters and removes network/live sockets; decoder tests exercise the installed codecs, copy tests controlled clipboard helpers. The shipped `tests/test_v040.py` covers common enum persistence/rejection/Reset and the new domain behavior; existing backend, v0.3 and store regressions remain. Historical v0.3 receipts, when present under `release-output/v030-tdd/` and `release-output/v030-result.json`, are not v0.4 verification. No live setter, GUI/pixel test, hosted CI, installation or publication is implied. Provenance: NOTICE.backend.md and `runtime/0.4.0/data/source-ledger.json`.

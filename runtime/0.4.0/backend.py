@@ -22,6 +22,9 @@ import tomllib
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 PREFERENCE_SCHEMA = {
+    'density': {'type':'enum','default':'comfortable','choices':['comfortable','compact'],'label':'Density'},
+    'layout': {'type':'enum','default':'grid','choices':['grid','list'],'label':'Layout'},
+    'sortOrder': {'type':'enum','default':'default','choices':['default','name','favorites-first'],'label':'Sort order'},
     'style': {'type':'enum','default':'vibrant','choices':['vibrant','muted','pastel','monochrome','high-contrast'],'label':'Palette style'},
     'favoritesOnly': {'type':'boolean','default':False,'label':'Favorites only'},
     'colorCount': {'type':'integer','default':6,'minimum':2,'maximum':16,'label':'Maximum colors'},
@@ -343,9 +346,9 @@ def export_actions():
             target=export_root()/name
             if hashlib.sha256(read(target)).hexdigest()==saved.get('sha256'):
                 with opened(target) as (_,info):
-                    if (info.st_dev,info.st_ino)==(saved.get('device'),saved.get('inode')): return ['export','favorite','copy-color','restore']
+                    if (info.st_dev,info.st_ino)==(saved.get('device'),saved.get('inode')): return ['export','favorite','copy-color','copy-css','restore']
         except (OSError,ValueError): pass
-    return ['export','favorite','copy-color']
+    return ['export','favorite','copy-color','copy-css']
 
 def render(colors,fmt):
     if not colors or len(colors)>16 or not all(isinstance(c,str) and HEX.fullmatch(c) for c in colors): raise OperationError('Extractor returned invalid colors')
@@ -438,13 +441,19 @@ def remember_success(result,selected):
 def action(selected,verb,apply=False,payload=None):
     if not apply: return {'ok':False,'message':'Explicit --apply is required; nothing changed.'}
     if payload is not None and verb!='copy-color': return {'ok':False,'message':'This action does not accept a payload'}
-    if not text(selected,160) or verb not in ('apply','restore','export','favorite','copy-color'): return {'ok':False,'message':'Invalid selection or action'}
+    if not text(selected,160) or verb not in ('apply','restore','export','favorite','copy-color','copy-css'): return {'ok':False,'message':'Invalid selection or action'}
     try:
-        if verb in ('favorite','copy-color'):
+        if verb in ('favorite','copy-color','copy-css'):
             options=prefs_module().read(PLUGIN,PREFERENCE_SCHEMA)['options']
             path=palette_source(selected,options)
         if verb=='favorite':
             return {'ok':True,'message':'Favorite updated.','preferences':prefs_module().toggle(PLUGIN,PREFERENCE_SCHEMA,selected)}
+        if verb=='copy-css':
+            colors=extract(path,options=options)
+            if palette_token(path,options)!=selected.split(':')[1]: raise OperationError('Wallpaper changed during extraction; refresh')
+            code,out,err=run(['wl-copy','--type','text/plain;charset=utf-8'],payload=render(colors,'css'),timeout=3)
+            if code or err: raise OperationError('Clipboard helper did not confirm acceptance')
+            return remember_success({'ok':True,'message':'Clipboard helper accepted CSS palette; no export created.'},selected)
         if verb=='copy-color':
             if not isinstance(payload,dict) or set(payload)!={'index'} or type(payload['index']) is not int: raise OperationError('Copy color requires an integer zero-based index')
             colors=extract(path,options=options)
