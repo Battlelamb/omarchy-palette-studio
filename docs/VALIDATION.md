@@ -1,65 +1,25 @@
-# Palette Studio
+# Palette Studio validation
 
-## v0.4.0 offline verification
+## v0.4.1 scope
 
-The shipped `env -u PYTHONPATH bash test.sh` completed with **73 Python passes, 1 explicit skips (74 discovered)** and **58 JavaScript component passes**. Its **23 native subprocess/settings cases** and **five native UI modes** also passed: wide, compact, tall-font and light-theme fixtures, with real Save/reopen/Reset readback and strict query-chip/control containment. These overlapping checks are not one aggregate score or real-provider/full-shell evidence.
+This patch changes the public plugin identity and versioned runtime URL, cleans current documentation, and adds namespace/version/portable-path assertions to the existing component tests. Backend, preference-store, validation and recovery behavior are unchanged. Historical results below are not fresh v0.4.1 qualification.
 
-All nine packages passed the final combined invocation with unchanged runtime hashes. Earlier baseline failures and the 4/9 candidate run remain failed historical receipts. Fixture repairs use bounded observed readiness, disappearing-process reads and synchronized Shader conflict/Confirm admission without weakened assertions or longer native 12/16-second deadlines. The exact historical Motion timeout cause remains unproved.
+Focused offline checks passed: package identity/layout validation, **59 Node component tests** (zero failures/skips), **11 required-file negative controls**, and **nine namespace/version/author/source-path/stale-runtime negative controls**. The namespace assertion first failed on the unchanged baseline. Runtime hashes were unchanged by the checks. Full Python/native suites, hosted CI and real-shell qualification are separate gates, not implied by this result.
 
-The final timeout harness (`4ed3b416d9a3eed324f28d24740f94aa5d5b19d1b80269f60b205f6c3b761720`) independently passed late-fork, separate-session, immutable early-evidence, PID-identity and unrelated-sentinel controls. Unprovable orphan ownership stays incomplete/nonzero, aborts later cases and relies on outer private-sandbox containment. Production/layout/backend and scoped metadata/fixture reviews passed; this is not a full security audit.
+For the complete offline gate, set `TMPDIR` to an existing private scratch directory and run `env -u PYTHONPATH bash test.sh`. It uses isolated image/clipboard fixtures, not live clipboard or desktop providers. See [CI scope](CI.md) for the narrower hosted checks; hosted status must be checked on the exact commit.
 
-Existing anchor-transition warnings remain, not warning-free operation. Measurements are diagnostic; feature growth adds bytes, with no universal speedup/FPS/resource reduction or debloat claim. Theme/wallpaper local search covers returned bounded rows. Motion curve/speed controls remain API-limited, not simulated.
+## Historical v0.4.0 offline results
 
-Runtime inventory SHA-256: `2538a7aa10070cb1668820b8255ed0e7cf5db9ac8b5e24303b74726469c2ae83` (sorted compact JSON of relative runtime paths to SHA-256 values). Runtime bytes match the fresh standalone-suite receipt. Browse/Configure previews are exact-source native Qt renders of illustrative metadata, not live user windows or action proof.
+The shipped gate recorded **73 Python passes, 1 explicit skip (74 discovered)** and **58 JavaScript component passes**. The **23 native subprocess/settings cases** and **five native UI modes** also passed, including wide, compact, tall-font and light-theme fixtures, Save/reopen/Reset readback and control containment. These overlapping checks are not an aggregate score or real-shell action evidence.
 
-**No installation, shell restart or live configuration change was performed this round.** Still unqualified: real-shell old/new/rollback and live actions, GPU, lock races, RTL/IME/accessibility, hotplug and longer isolated resources. The historical whole-shell resource failure stays failed. Hosted CI must be read on the exact pushed commit in Actions, separately from this local record. Source publication is not a stable release or marketplace promotion.
+Historical runtime inventory SHA-256: `2538a7aa10070cb1668820b8255ed0e7cf5db9ac8b5e24303b74726469c2ae83` (sorted compact JSON of relative runtime paths to SHA-256 values). This identifies v0.4.0 only. Browse/Configure images remain the illustrative v0.4.0 component renders documented in [PREVIEW.md](PREVIEW.md).
 
-## Historical checkpoints
+Earlier incomplete baseline/candidate runs remain failed records; the later offline pass does not qualify those runs or full-shell behavior. Native timeout cleanup refuses to claim success when descendant ownership cannot be proved, and aborts later cases. Existing anchor-transition warnings remain.
 
-The following records describe their original versions and publication/install observations, not newer-candidate coverage.
+## Earlier observations and limits
 
-> **Historical publication checkpoint:** at that checkpoint, the repository exposed the v0.3.0 development source, not a stable release. The runtime was installed for owner-authorized testing and the real panel opened, populated and closed without a shell restart. That observation does not qualify Apply/Restore, full nested upgrade/rollback or the missing Motion curve/speed features. Earlier qualification flags and failed/blocked gates below remain historical evidence, not claims about current repository visibility.
+The v0.3.0 offline gate recorded **68 Python passes out of 69 discovered**, with the shared Glyph-only CLI case explicitly skipped, and **51 Node passes**. Offscreen native fixtures and scoped reviews were not live Copy/export/Restore qualification. Historical test installation covered opening, populating and closing the panel without restarting the shell.
 
-## Historical v0.3.0 — UNRELEASED, not release-qualified
+The v0.2.1 compact-detail fix had native geometry/scrolling checks and a live UI upgrade observation, including waiting for the palette catalogue to finish. Historical v0.1.0 export/quarantine Restore checks do not qualify newer versions. Previous whole-shell resource attempts remained **failed/failed-to-run**: admission prevented a full-shell trial, and a separate device-free compositor attempt failed before shell startup. Component-only old/new/rollback loading does not close that gate.
 
-This package’s frozen v4 offline `bash test.sh` gate passed **68 Python tests out of 69 discovered** and **51 Node component tests**. 1 explicit skip: the shared Glyph real-CLI case belongs to Glyph Picker only. Package checks and shipped native subprocess/settings/panel checks also completed; those overlapping checks are separate from the Python/Node totals. Native Qt coverage uses offscreen components and adapter fixtures, not a real Omarchy shell or live provider. Runtime hashes still match the tested v4 bytes; these documentation changes do not acquire retroactive GUI coverage.
-
-Independent remediation-closure and membership-optimization reviews passed their named deltas, not feature completeness or release approval. Large-favorites measurements are diagnostic, not universal latency/FPS/resource evidence; the Controller grows by 181 bytes, so this is not debloat.
-
-The all-nine real full-shell old/new/rollback gate is **FAILED_TO_RUN: 0/9 qualified**. Conservative GPU-resource admission blocked launch; the separate device-free compositor attempt failed before shell startup. Existing workloads were left untouched. Offscreen component tests are not a substitute. Motion’s requested subtle/snappy/smooth/expressive curves and speed remain unsupported and incomplete; original acceptance scope is not reduced. All nine candidates remain `qualification_passed: false`.
-
-**Historical owner-testing status: v0.3.0 was installed for owner-authorized testing, and this development source repository is public. No stable release is claimed.** Hosted CI status is reported by the repository workflow, not established by this local validation record. Any private fixture commits/source archives are offline qualification artifacts, not release commits or install approval. Long-soak/resource, real-shell lifecycle, live lock races and upgrade/rollback remain separate unqualified gates.
-
-## Historical v0.2.1 and earlier — not v0.3.0 evidence
-
-## Historical v0.2.1 compact selected-detail fix
-
-The compact detail viewport follows its content height up to a bounded 64px token instead of fixing it at 40px. Long metadata still scrolls; backend/controller/bounded-process bytes are unchanged. All runtime URLs advance to v0.2.1 to avoid reusing the already-loaded v0.2.0 component URL.
-
-Fresh private native Qt regression reproduced the old clipping with representative JetBrains Mono 14px body / 13px small typography: 43px of title/body/padding did not fit in 40px. The corrected template passed title plus one complete body line, three preset choices, action/footer containment and real long-text scrolling checks at 680×520 and 640×480 cards, also at a 640×480 output. Default typography was checked separately. This is fixture-backed software-rendered native geometry/pixel evidence, not a new live desktop/backend action qualification or certification of every font/scale. With production preset descriptions and status text, all three tiles fit at 680×520; smaller layouts can require native list scrolling. Each choice was reached and fully shown using native keyboard input at 640×480 cards and outputs; simultaneous visibility of all three full tiles is not claimed there.
-
-Scoped exact-tree independent review and refreshed illustrative preview checks passed. Sealing, source-export verification and live v0.2.1 integration are recorded separately. The earlier suite totals below are historical v0.2.0 evidence, not fresh v0.2.1 suite claims.
-
-## Historical v0.2.0 qualification
-
-Release gate: **passed for the scoped offline candidate**. Live v0.2.0 integration, hosted CI and publication are separate gates.
-
-The release preserves backend, controller and bounded-process semantics while moving the installed entry point to a new versioned URL. Its own offline Node/Python/native tests, package validation and the all-nine native wide/compact/actual-backend bridge gates must pass on the exact candidate before sealing. Counts and source hashes come from fresh parsed receipts, not an estimate.
-
-Historical v0.1.0 integration covered native UI/catalogues plus actual clipboard Copy, Steam menu startup, calculator launch, theme/wallpaper Apply/Restore, palette export/quarantine Restore, runtime motion/layout Restore and timed GPU shader recovery. Those are **historical checks**, not retroactive v0.2.0 GUI coverage. Shader empty-state and native wallpaper hardlink bookkeeping fixes are retained with their regression tests.
-
-Not a full security audit. Every app/game, long soak, fractional scaling/RTL/IME/full accessibility, screen-lock races, all outputs, upgrades under active external actions, physical power loss and hosted CI remain unqualified unless separately recorded. Other profile retints/remote theme propagation were excluded from prior theme tests. The earlier whole-shell resource gate remains **failed**; this UI revision makes no speedup/FPS/steady-state resource claim.
-
-No raw desktop captures, private window titles, raw clipboard content, provider logs, process traces or credentials belong in public release assets. Private bench captures stay outside the public source export. Optional public preview assets are withheld unless rights and content are checked.
-
-## Recorded v0.2.0 offline coverage
-
-The exact nine-tool candidate passed 315 Node tests, 333 backend tests and 207 native subprocess checks across its packages; the separate native wide/compact UI suite passed 590 checks, and the actual-backend/private-UI bridge passed 62 cases. Same-process old/new/rollback loading passed 93 assertions across nine sequences (27 component loads). These suite counts overlap in exercised behavior and are not a single performance or security score. Runtime hashes bind the checks to the candidate; later documentation/preview corrections do not acquire retroactive GUI coverage.
-
-The exporter and component workflow passed scoped independent review. Each source archive must still be checked against its committed file inventory, modes and bytes, including its actual archived full licence, before delivery. Hosted component CI has not run; see [CI.md](CI.md) for its deliberately narrower scope. Public previews are native Qt captures with clearly labelled illustrative catalogues, not live provider/action evidence; see [PREVIEW.md](PREVIEW.md).
-
-## Historical fresh v0.2.1 receipts
-
-Nine sanctioned offline package suites passed 315 Node, 333 backend and 207 native-process checks. The targeted compact-detail native regression passed 504 checks; the separate real-preset keyboard run passed 504. The actual-backend/private-handler bridge passed 62 cases; same-private-process 0.2.0 → 0.2.1 → 0.2.0 loading passed 93 assertions. These separate suites overlap in behavior. Native pixel checks restored the previously clipped body line without changing its visible prefix. All 27 backend/controller/process blobs remain byte-identical. Refreshed illustrative previews passed 90 native checks and exact decoded-pixel/source matching. Hosted CI remains unrun.
-
-Live v0.2.1 UI upgrade and rendered-catalogue checks also passed for all nine installed plugins without restarting the shell. Selected detail text was readable in the three preset panels, Palette Studio completed its catalogue, and the original workspace and observed configuration/effects/process state were preserved. This adds UI/upgrade coverage, not a new live action, universal rollback, font-design legal clearance, hosted CI, resource or long-soak certification. Small preset layouts retain keyboard/list scrolling.
+**Still unqualified for this patch:** real-shell old/new/rollback, live clipboard/paste/export/Restore, GPU presentation, lock races, RTL/IME/accessibility, hotplug, long-soak/resource behavior and physical power-loss recovery. Restore retains owned export bytes in quarantine; bounded stores and ownership/conflict checks in [BACKEND.md](../BACKEND.md) remain authoritative. No performance improvement, full security audit, stable release or marketplace approval is claimed. No installation, shell restart or live configuration change is part of this cleanup.

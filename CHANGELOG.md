@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 — namespace and current-source privacy cleanup
+
+- Use the public `battlelamb.palette-studio` identity and Battlelamb author, with a fresh versioned runtime URL.
+- Clean current documentation and add identity/privacy checks; preserve published history, stable preference/recovery paths and action safeguards.
+- Existing installation, enabled-plugin, menu and binding references need updating; source updates do not rename IDs automatically.
+
 ## 0.4.0 — development/testing source snapshot
 
 - Copy a freshly extracted palette as fixed-format CSS without creating an export or changing recovery state.

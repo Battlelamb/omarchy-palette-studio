@@ -1,6 +1,8 @@
 # Public native preview provenance
 
-## Current 0.4.0 Browse and Configure
+## Retained 0.4.0 Browse and Configure
+
+These images and their source hashes describe v0.4.0. They were not regenerated for the v0.4.1 namespace/privacy patch and are not exact-source evidence for that patch.
 
 `preview.png` and `configure-preview.png` are real native Qt/Quickshell component renders of this version, with outside Illustrative/version/no-actions captions. They are not live desktop/library captures or action confirmations.
 

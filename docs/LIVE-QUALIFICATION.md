@@ -1,13 +1,9 @@
 # Local integration coverage
 
-Current v0.2.1: scoped exact-tree review, private native compact-detail/font/scrolling checks and live UI upgrade passed. All nine installed entries were source-matched, opened and visually checked with real catalogues on an empty workspace. The selected-description clipping is corrected and Palette Studio was allowed to finish loading. Original workspace, menu/bindings/configuration, observed effects and compositor/shell processes were preserved; no shell restart. No new live Copy, launch, Apply or export action is claimed.
+The v0.4.1 namespace/privacy patch has no new live integration qualification. Opening the panel, clipboard/paste, export/quarantine Restore and real-shell old/new/rollback remain separate gates. No live installation or configuration change is part of this cleanup.
 
-## Historical v0.2.0 summary (recorded before its live upgrade)
+Historical v0.2.1 observations covered native compact-detail/font/scrolling checks and a live UI upgrade with a real catalogue, allowing extraction to finish before inspection. The panel opened and closed without restarting the shell, while configuration and observed desktop state were preserved. This was UI/upgrade coverage, not a new live Copy/export/Restore pass. Earlier full-shell attempts remain failed or failed-to-run; offscreen component loading is not equivalent.
 
-This public-safe summary supersedes the earlier workstation-specific record; its original evidence remains private and is not bundled.
+Current access uses `omarchy-shell shell summon battlelamb.palette-studio`. Existing installation, enabled-plugin, menu and binding references must be updated to that ID; stable preference, export and recovery paths are unchanged.
 
-Offline UI qualification and scoped independent reviews: **passed**. Live v0.2.0 upgrade: **pending**.
-
-Access is through `omarchy-shell shell summon leviathan.palette-studio`, optionally under **Super+Space → Appearance → Palette Studio** using the README snippet. No per-plugin number shortcut is installed.
-
-See [VALIDATION.md](VALIDATION.md) for the distinction between historical backend action checks and the new version's UI/upgrade checks. Backend action limits remain authoritative in [BACKEND.md](../BACKEND.md). No universal rollback, security audit, long-soak or performance claim.
+See [VALIDATION.md](VALIDATION.md) and [BACKEND.md](../BACKEND.md) for historical checks, bounded stores and quarantine/ownership limits. No universal rollback, security audit, long-soak or performance claim.

@@ -1,19 +1,19 @@
-# Palette Studio backend — v0.4.0
+# Palette Studio backend — v0.4.1
 
 ## Exact CLI
 
 From the plugin checkout (source/data lookup does not otherwise depend on cwd):
 
 ```sh
-/usr/bin/python3 runtime/0.4.0/backend.py catalog
-/usr/bin/python3 runtime/0.4.0/backend.py preferences
-/usr/bin/python3 runtime/0.4.0/backend.py preferences --apply --payload '{"options":{"style":"pastel","colorCount":8,"favoritesOnly":false}}'
-/usr/bin/python3 runtime/0.4.0/backend.py action --id PALETTE-ID-FROM-CATALOG --verb favorite --apply
-/usr/bin/python3 runtime/0.4.0/backend.py action --id PALETTE-ID-FROM-CATALOG --verb copy-color --apply --payload '{"index":0}'
-/usr/bin/python3 runtime/0.4.0/backend.py action --id PALETTE-ID-FROM-CATALOG --verb copy-css --apply
-/usr/bin/python3 runtime/0.4.0/backend.py action --id PALETTE-ID-FROM-CATALOG --verb export --apply
-/usr/bin/python3 runtime/0.4.0/backend.py action --id restore:last --verb restore --apply
-/usr/bin/python3 runtime/0.4.0/backend.py preferences --apply --payload '{"reset":true}'
+/usr/bin/python3 runtime/0.4.1/backend.py catalog
+/usr/bin/python3 runtime/0.4.1/backend.py preferences
+/usr/bin/python3 runtime/0.4.1/backend.py preferences --apply --payload '{"options":{"style":"pastel","colorCount":8,"favoritesOnly":false}}'
+/usr/bin/python3 runtime/0.4.1/backend.py action --id PALETTE-ID-FROM-CATALOG --verb favorite --apply
+/usr/bin/python3 runtime/0.4.1/backend.py action --id PALETTE-ID-FROM-CATALOG --verb copy-color --apply --payload '{"index":0}'
+/usr/bin/python3 runtime/0.4.1/backend.py action --id PALETTE-ID-FROM-CATALOG --verb copy-css --apply
+/usr/bin/python3 runtime/0.4.1/backend.py action --id PALETTE-ID-FROM-CATALOG --verb export --apply
+/usr/bin/python3 runtime/0.4.1/backend.py action --id restore:last --verb restore --apply
+/usr/bin/python3 runtime/0.4.1/backend.py preferences --apply --payload '{"reset":true}'
 ```
 
 Replace the placeholder with an exact current catalog ID, including its `json` / `css` / `gpl` suffix. **Only `copy-color` accepts an action payload**: exactly `{"index":N}`, where N is a JSON integer (not boolean), zero-based and inside the freshly extracted palette. Other verbs reject any payload. Arbitrary text, output paths, shell commands and postprocessing fields are not supported.
@@ -95,4 +95,4 @@ Use only the shipped offline runner, with `TMPDIR` naming an existing private sc
 env -u PYTHONPATH /usr/bin/python3 scripts/run-tests.py --backend-only
 ```
 
-The bwrap runner clears HOME/env, masks production setters and removes network/live sockets; decoder tests exercise the installed codecs, copy tests controlled clipboard helpers. The shipped `tests/test_v040.py` covers common enum persistence/rejection/Reset and the new domain behavior; existing backend, v0.3 and store regressions remain. Historical v0.3 receipts, when present under `release-output/v030-tdd/` and `release-output/v030-result.json`, are not v0.4 verification. No live setter, GUI/pixel test, hosted CI, installation or publication is implied. Provenance: NOTICE.backend.md and `runtime/0.4.0/data/source-ledger.json`.
+The bwrap runner clears HOME/env, masks production setters and removes network/live sockets; decoder tests exercise the installed codecs, copy tests controlled clipboard helpers. The shipped `tests/test_v040.py` covers common enum persistence/rejection/Reset and the new domain behavior; existing backend, v0.3 and store regressions remain. Historical v0.3 receipts, when present under `release-output/v030-tdd/` and `release-output/v030-result.json`, are not v0.4 verification. No live setter, GUI/pixel test, hosted CI, installation or publication is implied. Provenance: NOTICE.backend.md and `runtime/0.4.1/data/source-ledger.json`.

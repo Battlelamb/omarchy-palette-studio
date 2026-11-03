@@ -4,7 +4,7 @@
 
 Extract colors from local wallpapers, compare five styles and inspect numeric contrast. Copy one hex color, **Copy CSS palette** to the clipboard, or export JSON, CSS and GIMP palettes. No desktop retint, app-config rewrite or Wallbash template execution.
 
-> **0.4.0 development candidate — not a stable release or installed upgrade.** Offline checks use real image fixtures and controlled clipboard helpers. Native UI integration, live clipboard/export/Restore and full nested upgrade/rollback need separate qualification.
+> **0.4.1 development candidate — not a stable release or installed upgrade.** Offline checks use real image fixtures and controlled clipboard helpers. Native UI integration, live clipboard/export/Restore and full nested upgrade/rollback need separate qualification.
 
 ![Palette Studio 0.4.0 native Browse with illustrative catalogue data](preview.png)
 
@@ -25,10 +25,12 @@ Requires **Omarchy Quattro's native shell**, **Python 3.11+**, installed ImageMa
 
 ```sh
 omarchy plugin add https://github.com/Battlelamb/omarchy-palette-studio.git --enable
-omarchy-shell shell summon leviathan.palette-studio
+omarchy-shell shell summon battlelamb.palette-studio
 ```
 
-The Git install follows repository source, not an unreleased candidate or stable tag. Existing **Super+Space → Appearance → Palette Studio** entries continue to work; the summon command requires no dedicated hotkey.
+The Git install follows repository source, not an unreleased candidate or stable tag. The summon command requires no menu entry or dedicated hotkey.
+
+**Namespace migration:** existing installation, enabled-plugin, menu and binding references need updating to `battlelamb.palette-studio`. Preferences and recovery data stay at their stable paths; a normal source update does not rename plugin IDs automatically.
 
 ## From image to palette
 
@@ -117,12 +119,12 @@ The shipped offline bwrap runner clears HOME/environment, removes network/live s
 Empty palettes? Check `magick`, safe roots, filters and decode budgets. Failed copy? Check `wl-copy` and choose a fresh source/style variant. Refused Restore? Check external edits/replaced files; never bypass ownership checks.
 
 ```sh
-omarchy-shell shell hide leviathan.palette-studio
-omarchy plugin disable leviathan.palette-studio
+omarchy-shell shell hide battlelamb.palette-studio
+omarchy plugin disable battlelamb.palette-studio
 # Optional; retains exports, hidden recovery files and preferences:
-omarchy plugin remove leviathan.palette-studio
+omarchy plugin remove battlelamb.palette-studio
 ```
 
 **GPL-3.0-only** · [License](LICENSE) · [Source notices](NOTICE.md) · [Backend attribution](NOTICE.backend.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-Independent community plugin by Ömer Eren; not an official Omarchy or HyDE release.
+Independent community plugin by Battlelamb; not an official Omarchy or HyDE release.

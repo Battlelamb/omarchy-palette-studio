@@ -4,6 +4,18 @@ const paths=require('./shared-paths.cjs');
 const api=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(paths.runtime,'Controller.js'),'utf8'),api);
 const ids=rows=>Array.from(rows,r=>r.id);
 const getFunction=require('./panel-functions.cjs');
+test('public namespace and version agree without workstation paths in runtime source',()=>{
+ const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,'../manifest.json'),'utf8'));
+ const slug=path.basename(paths.panel,'.qml').replace(/([a-z])([A-Z])/g,'$1-$2').toLowerCase();
+ assert.equal(manifest.id,'battlelamb.'+slug);assert.equal(manifest.author,'Battlelamb');assert.equal(manifest.version,'0.4.1');
+ assert.equal(path.dirname(manifest.entryPoints.overlay),'runtime/'+manifest.version);
+ const source=fs.readFileSync(paths.panel,'utf8');
+ assert.ok(source.includes('WlrLayershell.namespace: "battlelamb-'+slug+'"'));
+ for(const name of fs.readdirSync(paths.runtime,{recursive:true})) {
+  const file=path.join(paths.runtime,name);
+  if(fs.statSync(file).isFile())assert.doesNotMatch(fs.readFileSync(file,'utf8'),/\/(?:home|srv)\/|\/run\/user\/\d+/,name+' uses portable paths');
+ }
+});
 test('filter reset changes presentation only and native buttons accept keyboard focus',()=>{
  const src=fs.readFileSync(paths.panel,'utf8');let focus=0;
  const root={query:'find',categoryFilter:'Tools',providerFilter:'Local',installedFilter:'installed',selected:3,actions:['restore'],preferences:{options:{}}};
@@ -29,7 +41,7 @@ test('panel consumes density and both layouts for galleries and presets without 
   assert.equal(binding('dense',root),true);
  }
  assert.match(src,/Controller.primaryVerb\(actions, root.settingsSchema.primaryAction \? root.preferences.options : null\)/);
- assert.match(src,/function featureRevision\(\) \{ return '0.4.0'; \}/);
+ assert.match(src,/function featureRevision\(\) \{ return '0.4.1'; \}/);
  for(const verb of ['copy-unicode','copy-app-id','copy-css'])assert.ok(JSON.parse(fs.readFileSync(path.join(paths.runtime,'i18n/en.json'),'utf8'))[verb]);
  assert.match(src,/text:strings.t\(modelData\)/);
 });
